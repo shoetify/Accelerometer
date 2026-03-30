@@ -63,7 +63,11 @@ The processing workflow will:
 4. Ignore the title/header section in each file
 5. Read the four numeric columns `(time, x, y, z)`
 6. Apply the calibration formula to every row
-7. Save processed files to `output/` as `*_processed.txt`
+7. Ask for a stable `start_time,end_time` for each file
+8. Average the calibrated `(x, y, z)` values in that stable window
+9. Build a rotation matrix that maps the averaged gravity vector to `(0, gravity, 0)`
+10. Apply that rotation matrix to all calibrated rows
+11. Save the rotated output to `output/` as `*_processed.txt`
 
 ## Saved Result
 
