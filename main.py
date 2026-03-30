@@ -3,7 +3,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 
-from accelerometer_calibration.calibration import main
+from accelerometer_calibration.cli import main
 
 
 if __name__ == "__main__":

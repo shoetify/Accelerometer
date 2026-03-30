@@ -49,7 +49,7 @@ def load_data(file_path: Path) -> np.ndarray:
             if not stripped:
                 continue
 
-            parts = stripped.split("\t")
+            parts = stripped.split()
             if len(parts) != 4:
                 continue
             try:
@@ -219,7 +219,7 @@ def load_calibration_result(input_path: Path) -> CalibrationResult:
     )
 
 
-def main() -> int:
+def run_calibration() -> int:
     input_dir = Path.cwd() / "input"
     files = sorted(input_dir.glob("*.txt"))
     if len(files) != 3:
@@ -293,3 +293,4 @@ def main() -> int:
     print(f"Saved calibration result to: {output_path}")
 
     return 0
+
