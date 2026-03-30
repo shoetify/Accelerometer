@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -23,6 +24,15 @@ class CalibrationPoint:
     window: TimeWindow
     mean_xyz: np.ndarray
     sample_count: int
+
+
+@dataclass(frozen=True)
+class CalibrationResult:
+    gravity: float
+    scales: np.ndarray
+    offsets: np.ndarray
+    calibration_points: list[CalibrationPoint]
+    corrected_norms: np.ndarray
 
 
 def load_data(file_path: Path) -> np.ndarray:
@@ -125,6 +135,90 @@ def format_point(point: CalibrationPoint) -> str:
     )
 
 
+def save_calibration_result(result: CalibrationResult, output_path: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "gravity": result.gravity,
+        "parameters": {
+            "a1": float(result.scales[0]),
+            "a2": float(result.scales[1]),
+            "a3": float(result.scales[2]),
+            "b1": float(result.offsets[0]),
+            "b2": float(result.offsets[1]),
+            "b3": float(result.offsets[2]),
+        },
+        "calibration_points": [
+            {
+                "label": point.label,
+                "source_file": point.source_file,
+                "time_window": {
+                    "label": point.window.label,
+                    "start_time": point.window.start_time,
+                    "end_time": point.window.end_time,
+                },
+                "mean_xyz": {
+                    "x": float(point.mean_xyz[0]),
+                    "y": float(point.mean_xyz[1]),
+                    "z": float(point.mean_xyz[2]),
+                },
+                "sample_count": point.sample_count,
+                "corrected_norm": float(result.corrected_norms[index]),
+            }
+            for index, point in enumerate(result.calibration_points)
+        ],
+    }
+    output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
+def load_calibration_result(input_path: Path) -> CalibrationResult:
+    payload = json.loads(input_path.read_text(encoding="utf-8"))
+    calibration_points = [
+        CalibrationPoint(
+            label=item["label"],
+            source_file=item["source_file"],
+            window=TimeWindow(
+                label=item["time_window"]["label"],
+                start_time=float(item["time_window"]["start_time"]),
+                end_time=float(item["time_window"]["end_time"]),
+            ),
+            mean_xyz=np.array(
+                [
+                    float(item["mean_xyz"]["x"]),
+                    float(item["mean_xyz"]["y"]),
+                    float(item["mean_xyz"]["z"]),
+                ],
+                dtype=float,
+            ),
+            sample_count=int(item["sample_count"]),
+        )
+        for item in payload["calibration_points"]
+    ]
+    return CalibrationResult(
+        gravity=float(payload["gravity"]),
+        scales=np.array(
+            [
+                float(payload["parameters"]["a1"]),
+                float(payload["parameters"]["a2"]),
+                float(payload["parameters"]["a3"]),
+            ],
+            dtype=float,
+        ),
+        offsets=np.array(
+            [
+                float(payload["parameters"]["b1"]),
+                float(payload["parameters"]["b2"]),
+                float(payload["parameters"]["b3"]),
+            ],
+            dtype=float,
+        ),
+        calibration_points=calibration_points,
+        corrected_norms=np.array(
+            [float(item["corrected_norm"]) for item in payload["calibration_points"]],
+            dtype=float,
+        ),
+    )
+
+
 def main() -> int:
     input_dir = Path.cwd() / "input"
     files = sorted(input_dir.glob("*.txt"))
@@ -166,6 +260,13 @@ def main() -> int:
     offsets = params[3:]
     corrected = (points - offsets) * scales
     corrected_norms = np.linalg.norm(corrected, axis=1)
+    result = CalibrationResult(
+        gravity=GRAVITY,
+        scales=scales,
+        offsets=offsets,
+        calibration_points=calibration_points,
+        corrected_norms=corrected_norms,
+    )
 
     print("Averaged calibration points")
     for point in calibration_points:
@@ -184,5 +285,11 @@ def main() -> int:
     print("Residual check")
     for index, norm_value in enumerate(corrected_norms, start=1):
         print(f"group_{index}: corrected_norm={norm_value:.10f}, target={GRAVITY:.10f}")
+
+    output_path = Path.cwd() / "output" / "calibration_result.json"
+    save_calibration_result(result, output_path)
+
+    print()
+    print(f"Saved calibration result to: {output_path}")
 
     return 0

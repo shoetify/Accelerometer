@@ -26,3 +26,17 @@ The script will:
 3. Ask for `start_time` and `end_time` for `test_1` and `test_2`
 4. Print the six averaged calibration points
 5. Print the fitted calibration parameters and residual check
+6. Save the calibration result to `output/calibration_result.json`
+
+## Saved Result
+
+After a calibration run, the project writes `output/calibration_result.json`.
+This file contains:
+
+- `a1`, `a2`, `a3`
+- `b1`, `b2`, `b3`
+- the six averaged calibration points
+- the selected time windows
+- the corrected norm for each point
+
+This saved file is intended to be reused by later data-analysis steps.
