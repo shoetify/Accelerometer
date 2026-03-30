@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 
 from .calibration import run_calibration
+from .displacement import process_displacement_data
 from .processing import process_experiment_data
 
 
@@ -35,6 +36,23 @@ def build_parser() -> argparse.ArgumentParser:
         default=Path.cwd() / "output" / "calibration_result.json",
         help="Path to calibration_result.json.",
     )
+
+    displacement_parser = subparsers.add_parser(
+        "displacement",
+        help="Convert processed acceleration files in input/ to displacement data in output/.",
+    )
+    displacement_parser.add_argument(
+        "--input-dir",
+        type=Path,
+        default=Path.cwd() / "input",
+        help="Directory containing *_processed.txt acceleration files.",
+    )
+    displacement_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path.cwd() / "output",
+        help="Directory for displacement output files.",
+    )
     return parser
 
 
@@ -49,6 +67,11 @@ def main(argv: list[str] | None = None) -> int:
             input_dir=args.input_dir,
             output_dir=args.output_dir,
             calibration_path=args.calibration,
+        )
+    if args.command == "displacement":
+        return process_displacement_data(
+            input_dir=args.input_dir,
+            output_dir=args.output_dir,
         )
 
     parser.error(f"Unknown command: {args.command}")

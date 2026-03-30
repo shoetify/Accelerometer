@@ -17,6 +17,7 @@ to every numeric row in each experiment `.txt` file found in `input/`.
 The code is split by responsibility:
 
 - `src/accelerometer_calibration/calibration.py` contains calibration logic
+- `src/accelerometer_calibration/displacement.py` contains acceleration-to-displacement conversion logic
 - `src/accelerometer_calibration/processing.py` contains experiment-data processing logic
 - `src/accelerometer_calibration/cli.py` contains command-line routing
 
@@ -81,3 +82,24 @@ This file contains:
 - the corrected norm for each point
 
 This saved file is intended to be reused by later data-analysis steps.
+
+## Run Displacement Conversion
+
+```bash
+python main.py displacement
+```
+
+Alternative:
+
+```bash
+$env:PYTHONPATH = "src"
+python -m accelerometer_calibration displacement
+```
+
+The displacement workflow will:
+
+1. Discover all `*_processed.txt` files in `input/`
+2. Read the four numeric columns `(time, acce_x, acce_y, acce_z)` one file at a time
+3. Derive the sample rate from the `time` column
+4. Apply the high-pass-filter and double-integration procedure to get displacement data
+5. Save displacement results to `output/` as `*_displacement.txt`
