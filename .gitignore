@@ -1,0 +1,6 @@
+pyproject.toml
+.venv
+.vscode
+/input
+**__pycache__
+**.egg-info
