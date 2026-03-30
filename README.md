@@ -1,105 +1,144 @@
 # Accelerometer Calibration
 
-This project reads the three calibration `.txt` files in `input/`, prompts for
-two time windows per file, calculates six averaged `(x, y, z)` calibration
-points, and fits calibration parameters `(a1, a2, a3, b1, b2, b3)` such that:
+This project calibrates accelerometer text exports, applies the saved
+calibration to experiment files, and converts aligned acceleration data into
+displacement output.
 
-`(a1*(x-b1))^2 + (a2*(y-b2))^2 + (a3*(z-b3))^2 = 9.81^2`
+## Project Layout
 
-The project also supports batch-processing experiment files using a saved
-`output/calibration_result.json`. During processing it imports both `gravity`
-and `parameters` from the JSON file and applies:
+```text
+Accelerometer/
+|-- input/                                raw calibration and experiment .txt files
+|-- output/                               generated calibration and analysis files
+|-- src/accelerometer_calibration/
+|   |-- cli.py                            command-line entrypoint
+|   |-- paths.py                          shared default paths and output names
+|   |-- calibration.py                    calibration workflow and JSON save/load
+|   |-- processing.py                     calibration application and gravity alignment
+|   |-- displacement.py                   acceleration-to-displacement conversion
+|   |-- __init__.py
+|   `-- __main__.py                       supports python -m accelerometer_calibration
+|-- main.py                               compatibility launcher from repo root
+`-- pyproject.toml                        package metadata and CLI script
+```
 
-`X = a1*(x-b1), Y = a2*(y-b2), Z = a3*(z-b3)`
+## Recommended Command
 
-to every numeric row in each experiment `.txt` file found in `input/`.
+Install the project once in editable mode:
 
-The code is split by responsibility:
+```bash
+python -m pip install -e .
+```
 
-- `src/accelerometer_calibration/calibration.py` contains calibration logic
-- `src/accelerometer_calibration/displacement.py` contains acceleration-to-displacement conversion logic
-- `src/accelerometer_calibration/processing.py` contains experiment-data processing logic
-- `src/accelerometer_calibration/cli.py` contains command-line routing
+After that, use the installed command:
 
-## Run Calibration
+```bash
+accelerometer
+```
+
+That starts the calibration workflow directly.
+
+Compatibility entrypoints still work:
 
 ```bash
 python main.py
-```
-
-Alternative:
-
-```bash
-$env:PYTHONPATH = "src"
 python -m accelerometer_calibration
 ```
 
-The calibration workflow will:
+## Commands
 
-1. Discover the three `.txt` files in `input/`
-2. Show the time range for each file
-3. Ask for `start_time` and `end_time` for `test_1` and `test_2`
-4. Print the six averaged calibration points
-5. Print the fitted calibration parameters and residual check
-6. Save the calibration result to `output/calibration_result.json`
+### 1. Calibrate
 
-## Run Data Processing
+Default:
 
 ```bash
-python main.py process
+accelerometer
 ```
 
-Alternative:
+Explicit:
 
 ```bash
-$env:PYTHONPATH = "src"
-python -m accelerometer_calibration process
+accelerometer calibrate
 ```
 
-The processing workflow will:
-
-1. Read `output/calibration_result.json`
-2. Import `gravity` and `parameters`
-3. Discover all experiment `.txt` files in `input/`
-4. Ignore the title/header section in each file
-5. Read the four numeric columns `(time, x, y, z)`
-6. Apply the calibration formula to every row
-7. Ask for a stable `start_time,end_time` for each file
-8. Average the calibrated `(x, y, z)` values in that stable window
-9. Build a rotation matrix that maps the averaged gravity vector to `(0, gravity, 0)`
-10. Apply that rotation matrix to all calibrated rows
-11. Save the rotated output to `output/` as `*_processed.txt`
-
-## Saved Result
-
-After a calibration run, the project writes `output/calibration_result.json`.
-This file contains:
-
-- `a1`, `a2`, `a3`
-- `b1`, `b2`, `b3`
-- the six averaged calibration points
-- the selected time windows
-- the corrected norm for each point
-
-This saved file is intended to be reused by later data-analysis steps.
-
-## Run Displacement Conversion
+Optional paths:
 
 ```bash
-python main.py displacement
+accelerometer calibrate --input-dir input --output output/calibration.json
 ```
 
-Alternative:
+This workflow:
+
+1. Reads the 3 calibration `.txt` files in `input/`
+2. Prompts for two time windows per file
+3. Calculates 6 averaged `(x, y, z)` calibration points
+4. Fits calibration parameters `(a1, a2, a3, b1, b2, b3)`
+5. Saves the result to `output/calibration.json`
+
+Fitted model:
+
+`(a1*(x-b1))^2 + (a2*(y-b2))^2 + (a3*(z-b3))^2 = 9.81^2`
+
+### 2. Process Experiment Files
 
 ```bash
-$env:PYTHONPATH = "src"
-python -m accelerometer_calibration displacement
+accelerometer process
 ```
 
-The displacement workflow will:
+Optional paths:
 
-1. Discover all `*_processed.txt` files in `input/`
-2. Read the four numeric columns `(time, acce_x, acce_y, acce_z)` one file at a time
-3. Derive the sample rate from the `time` column
-4. Apply the high-pass-filter and double-integration procedure to get displacement data
-5. Save displacement results to `output/` as `*_displacement.txt`
+```bash
+accelerometer process --input-dir input --output-dir output --calibration output/calibration.json
+```
+
+This workflow:
+
+1. Loads `gravity` and calibration parameters from `calibration.json`
+2. Applies `X = a1*(x-b1), Y = a2*(y-b2), Z = a3*(z-b3)` to each numeric row
+3. Prompts for a stable time window per file
+4. Rotates the data so the average gravity vector aligns to `(0, gravity, 0)`
+5. Writes `*_aligned_acceleration.txt` files to `output/`
+
+### 3. Convert Aligned Acceleration to Displacement
+
+Default:
+
+```bash
+accelerometer displacement
+```
+
+Explicit paths:
+
+```bash
+accelerometer displacement --input-dir output --output-dir output
+```
+
+This workflow:
+
+1. Reads aligned acceleration files from `output/`
+2. Derives the sample rate from the time column
+3. Applies high-pass filtering and double integration
+4. Writes `*_displacement_mm.txt` files to `output/`
+
+## Output Files
+
+The default generated files are:
+
+- `output/calibration.json`
+- `output/<source>_aligned_acceleration.txt`
+- `output/<source>_displacement_mm.txt`
+
+The processing and displacement commands still accept the older calibration and
+processed-file names if they already exist, but new runs now write the names
+above.
+
+## Saved Calibration File
+
+`output/calibration.json` includes:
+
+- `gravity`
+- `parameters.a1`, `parameters.a2`, `parameters.a3`
+- `parameters.b1`, `parameters.b2`, `parameters.b3`
+- averaged calibration points
+- selected time windows
+- corrected norm for each calibration point

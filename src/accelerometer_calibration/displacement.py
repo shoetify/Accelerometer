@@ -5,6 +5,11 @@ from pathlib import Path
 import numpy as np
 from scipy.signal import butter, filtfilt
 
+from .paths import (
+    default_output_dir,
+    displacement_filename,
+    is_aligned_acceleration_file,
+)
 
 CUTOFF_FREQUENCY_HZ = 0.5
 FILTER_ORDER = 6
@@ -100,13 +105,12 @@ def process_displacement_data(
     input_dir: Path | None = None,
     output_dir: Path | None = None,
 ) -> int:
-    base_dir = Path.cwd()
-    input_dir = input_dir or (base_dir / "input")
-    output_dir = output_dir or (base_dir / "output")
+    input_dir = input_dir or default_output_dir()
+    output_dir = output_dir or default_output_dir()
 
-    input_files = sorted(input_dir.glob("*_processed.txt"))
+    input_files = sorted(file_path for file_path in input_dir.glob("*.txt") if is_aligned_acceleration_file(file_path))
     if not input_files:
-        raise FileNotFoundError(f"No *_processed.txt files found in {input_dir}")
+        raise FileNotFoundError(f"No aligned acceleration .txt files found in {input_dir}")
 
     print(f"Processing {len(input_files)} processed acceleration file(s) from: {input_dir}")
 
@@ -115,8 +119,7 @@ def process_displacement_data(
         acceleration_data = load_processed_acceleration_data(input_file)
         displacement_data = convert_acceleration_data_to_displacement(acceleration_data)
 
-        output_name = input_file.name.replace("_processed.txt", "_displacement.txt")
-        output_file = output_dir / output_name
+        output_file = output_dir / displacement_filename(input_file)
         save_displacement_data(displacement_data, output_file)
         print(f"Saved displacement data: {output_file}")
 

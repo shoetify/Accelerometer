@@ -5,6 +5,12 @@ from pathlib import Path
 import numpy as np
 
 from .calibration import load_calibration_result, load_data
+from .paths import (
+    aligned_acceleration_filename,
+    default_output_dir,
+    default_input_dir,
+    resolve_calibration_path,
+)
 
 
 def apply_calibration_parameters(
@@ -101,10 +107,9 @@ def process_experiment_data(
     output_dir: Path | None = None,
     calibration_path: Path | None = None,
 ) -> int:
-    base_dir = Path.cwd()
-    input_dir = input_dir or (base_dir / "input")
-    output_dir = output_dir or (base_dir / "output")
-    calibration_path = calibration_path or (output_dir / "calibration_result.json")
+    input_dir = input_dir or default_input_dir()
+    output_dir = output_dir or default_output_dir()
+    calibration_path = resolve_calibration_path(calibration_path, output_dir)
 
     calibration = load_calibration_result(calibration_path)
     print(f"Loaded calibration result from: {calibration_path}")
@@ -148,7 +153,7 @@ def process_experiment_data(
         for row in rotation_matrix:
             print(f"  {row[0]: .10f} {row[1]: .10f} {row[2]: .10f}")
 
-        output_file = output_dir / f"{input_file.stem}_processed.txt"
+        output_file = output_dir / aligned_acceleration_filename(input_file)
         save_processed_data(rotated_data, output_file)
         print(f"Saved processed data: {output_file}")
 

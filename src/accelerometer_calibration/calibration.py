@@ -7,6 +7,8 @@ from pathlib import Path
 import numpy as np
 from scipy.optimize import least_squares
 
+from .paths import default_calibration_path, default_input_dir
+
 GRAVITY = 9.80665
 
 
@@ -98,7 +100,6 @@ def compute_mean_xyz(data: np.ndarray, window: TimeWindow) -> tuple[np.ndarray, 
 
 
 def fit_calibration(points: np.ndarray) -> np.ndarray:
-    initial_scale = GRAVITY / np.mean(np.linalg.norm(points, axis=1))
     x0 = np.array([30.0, 30.0, 30.0, 1.75, 1.75, 1.75], dtype=float)
     lower_bounds = np.array([25.0, 25.0, 25.0, 1.5, 1.5, 1.5], dtype=float)
     upper_bounds = np.array([35.0, 35.0, 35.0, 2.0, 2.0, 2.0], dtype=float)
@@ -219,8 +220,11 @@ def load_calibration_result(input_path: Path) -> CalibrationResult:
     )
 
 
-def run_calibration() -> int:
-    input_dir = Path.cwd() / "input"
+def run_calibration(
+    input_dir: Path | None = None,
+    output_path: Path | None = None,
+) -> int:
+    input_dir = input_dir or default_input_dir()
     files = sorted(input_dir.glob("*.txt"))
     if len(files) != 3:
         raise FileNotFoundError(f"Expected 3 .txt files in {input_dir}, found {len(files)}")
@@ -286,11 +290,10 @@ def run_calibration() -> int:
     for index, norm_value in enumerate(corrected_norms, start=1):
         print(f"group_{index}: corrected_norm={norm_value:.10f}, target={GRAVITY:.10f}")
 
-    output_path = Path.cwd() / "output" / "calibration_result.json"
+    output_path = output_path or default_calibration_path()
     save_calibration_result(result, output_path)
 
     print()
     print(f"Saved calibration result to: {output_path}")
 
     return 0
-
