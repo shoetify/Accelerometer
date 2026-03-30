@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 from .calibration import run_calibration
@@ -82,10 +83,39 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = build_parser()
-    args = parser.parse_args(argv)
+def prompt_menu_choice() -> list[str]:
+    print("Accelerometer Analysis")
+    print()
+    print("Choose an action:")
+    print("  1. Create calibration")
+    print("  2. Process experiment files")
+    print("  3. Convert acceleration to displacement")
+    print("  4. Exit")
+    print()
 
+    while True:
+        choice = input("Enter 1, 2, 3, or 4: ").strip()
+        if choice == "1":
+            return ["calibrate"]
+        if choice == "2":
+            return ["process"]
+        if choice == "3":
+            return ["displacement"]
+        if choice == "4":
+            return []
+        print("Invalid choice. Enter 1, 2, 3, or 4.")
+
+
+def should_pause_on_exit(argv: list[str]) -> bool:
+    return bool(getattr(sys, "frozen", False) or not argv)
+
+
+def pause_before_exit() -> None:
+    print()
+    input("Press Enter to close this window...")
+
+
+def run_command(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
     if args.command in (None, "calibrate"):
         return run_calibration(
             input_dir=args.input_dir if args.command == "calibrate" else None,
@@ -105,3 +135,30 @@ def main(argv: list[str] | None = None) -> int:
 
     parser.error(f"Unknown command: {args.command}")
     return 2
+
+
+def main(argv: list[str] | None = None) -> int:
+    effective_argv = list(sys.argv[1:] if argv is None else argv)
+    used_menu = False
+
+    if not effective_argv:
+        effective_argv = prompt_menu_choice()
+        used_menu = True
+        if not effective_argv:
+            return 0
+
+    parser = build_parser()
+
+    try:
+        args = parser.parse_args(effective_argv)
+        exit_code = run_command(args, parser)
+        print()
+        print("Completed successfully.")
+        return exit_code
+    except Exception as exc:
+        print()
+        print(f"Error: {exc}")
+        return 1
+    finally:
+        if used_menu or should_pause_on_exit(effective_argv):
+            pause_before_exit()

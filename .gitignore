@@ -5,3 +5,6 @@ pyproject.toml
 /output
 **__pycache__
 **.egg-info
+/build
+/dist
+*.spec

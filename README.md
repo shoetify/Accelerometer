@@ -36,7 +36,13 @@ After that, use the installed command:
 accelerometer
 ```
 
-That starts the calibration workflow directly.
+That opens a simple menu so the user can choose:
+
+- create calibration
+- process experiment files
+- convert acceleration to displacement
+
+This same menu is the recommended entrypoint for a packaged `.exe`.
 
 Compatibility entrypoints still work:
 
@@ -55,7 +61,11 @@ Default:
 accelerometer
 ```
 
-Explicit:
+Menu option:
+
+- `1. Create calibration`
+
+Explicit command:
 
 ```bash
 accelerometer calibrate
@@ -85,6 +95,10 @@ Fitted model:
 accelerometer process
 ```
 
+Menu option:
+
+- `2. Process experiment files`
+
 Optional paths:
 
 ```bash
@@ -106,6 +120,10 @@ Default:
 ```bash
 accelerometer displacement
 ```
+
+Menu option:
+
+- `3. Convert acceleration to displacement`
 
 Explicit paths:
 
@@ -131,6 +149,19 @@ The default generated files are:
 The processing and displacement commands still accept the older calibration and
 processed-file names if they already exist, but new runs now write the names
 above.
+
+## EXE Workflow
+
+If you package the project as an `.exe`, the expected user flow is:
+
+1. Launch the executable
+2. Choose an action from the menu
+3. Follow the prompts for that workflow
+4. Review the printed result
+5. Press Enter to close the window
+
+The program now pauses after a menu-driven or packaged run so the terminal does
+not disappear before the user can read the output.
 
 ## Saved Calibration File
 
